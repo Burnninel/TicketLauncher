@@ -1,0 +1,15 @@
+{
+	"name": "bling-ticket-extension",
+	"version": "1.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"typecheck": "tsc --noEmit",
+		"build": "node esbuild.config.js"
+	},
+	"devDependencies": {
+		"typescript": "^5.4.0",
+		"@types/chrome": "^0.0.268",
+		"esbuild": "^0.20.0"
+	}
+}
