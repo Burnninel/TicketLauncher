@@ -12,6 +12,14 @@ export const TICKET_DEFAULTS = {
 
 export const HTTP_TIMEOUT_MS = 10_000;
 
+export const LOG_MESSAGES = {
+	voiceTranscriberNotifyFailed: "[TicketLauncher] VoiceTranscriber notify failed:",
+} as const;
+
+export const INTERNAL_ERRORS = {
+	voiceTranscriberTokenMissing: "VoiceTranscriber integration token is not configured.",
+} as const;
+
 export const MESSAGES = {
 	bubble: "Novo ticket",
 	panelTitle: "Novo ticket de suporte",

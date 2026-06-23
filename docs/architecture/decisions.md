@@ -74,7 +74,7 @@ Cada decisão técnica relevante é registrada aqui no formato ADR (Architecture
 
 **Contexto**: O `styles.css` único cresceu com o redesign do bubble (identidade visual do Bling, novos estados e campos). Cores e medidas estavam espalhadas e duplicadas, dificultando manutenção e consistência.
 
-**Decisão**: Quebrar a estilização em `src/presentation/styles/` com um módulo por área (`_variables`, `_bubble`, `_panel`, `_fields`, `_states`) agregados por `index.css` via `@import`. Centralizar cores, espaços, raios e sombras em tokens `--bl-*` no `_variables.css`. O esbuild inlina os imports em um único `dist/content.css`, referenciado pelo manifest.
+**Decisão**: Quebrar a estilização em `src/presentation/styles/` com um módulo por área (`_variables`, `_widget`, `_panel`, `_fields`, `_states`) agregados por `index.css` via `@import`. Centralizar cores, espaços, raios e sombras em tokens `--bl-*` no `_variables.css`. O esbuild inlina os imports em um único `dist/content.css`, referenciado pelo manifest.
 
 **Consequências**:
 - Positivas: tokens reaproveitáveis, cada área de UI isolada em seu arquivo, prefixo `--bl-` evita colisão com variáveis CSS do callsys/Bling.
@@ -92,3 +92,31 @@ Cada decisão técnica relevante é registrada aqui no formato ADR (Architecture
 **Consequências**:
 - Positivas: aparência consistente entre plataformas, cor controlada por CSS, sem assets externos.
 - Negativas: markup SVG no bundle (peso desprezível).
+
+## ADR-008: Token de integração VoiceTranscriber em chrome.storage.local
+
+**Data**: 2026-06-23
+**Status**: Aceita
+
+**Contexto**: A extensão precisa autenticar as requisições ao endpoint `POST /v1/integrations/callsys-ticket` do VoiceTranscriber usando um token dedicado (`INTEGRATION_API_TOKEN`, header `x-integration-token`). O Chrome Manifest V3 não expõe variáveis de ambiente em build time, e não há tela de opções implementada.
+
+**Decisão**: Não versionar nem embutir o token no bundle. A extensão lê o valor de `chrome.storage.local` pela chave `voiceTranscriberIntegrationToken` (`Config.voiceTranscriber.tokenStorageKey`) e envia no header `x-integration-token`. O manifest declara a permissão `storage`. Tráfego sempre HTTPS em produção (tunnel Cloudflare).
+
+**Consequências**:
+- Positivas: o segredo não entra no histórico Git nem no bundle distribuído; o middleware do VoiceTranscriber permanece inalterado.
+- Negativas: é preciso configurar o token localmente antes de usar a integração; enquanto não houver tela de opções, essa configuração é manual.
+
+**Migração futura**: adicionar tela de opções (`options_page` no manifest) para gravar/atualizar o token sem abrir DevTools.
+
+## ADR-009: Integração TicketLauncher → VoiceTranscriber (fluxo invertido)
+
+**Data**: 2026-06-23
+**Status**: Aceita
+
+**Contexto**: O VoiceTranscriber precisava ser informado de que uma ligação ativa deveria ser transcrita. O webhook legado do CallSys não garantia ordenação correta com o ticket Bling.
+
+**Decisão**: A extensão TicketLauncher passa a ser o **ponto de disparo da transcrição**. Após criar o ticket no Bling com sucesso, envia `{ callId, ticketNumber, ticketId, cnpj }` ao VoiceTranscriber via `POST /v1/integrations/callsys-ticket` (fire-and-forget). O VT cria a linha `awaiting_callsys`, grava `record_link` como `audio_url` e inicia o poll. O webhook legado permanece como caminho paralelo sem mudanças; a unicidade `UNIQUE(call_id, source_key)` previne dupla transcrição.
+
+**Consequências**:
+- Positivas: eliminação do problema de timing; `record_link` disponível no seed; vínculo ligação↔ticket persistido de forma autoritativa em `callsys_ticket_links`.
+- Negativas: falha silenciosa da integração não impacta o fluxo do agente (desejado); requer `CALLSYS_REPORT_API_URL`/`CALLSYS_REPORT_API_TOKEN` configurados no VT.

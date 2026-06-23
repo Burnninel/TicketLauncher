@@ -1,7 +1,8 @@
 # Plano de Integração — TicketLauncher → VoiceTranscriber
 
-> **Status:** proposta (somente plano). Nenhuma linha de código foi alterada.
-> A implementação será feita em etapa separada após revisão e aprovação.
+> **Status:** aprovado — implementação iniciada no TicketLauncher
+> Todas as decisões em aberto do §5 foram fechadas em 2026-06-22.
+> O lado TicketLauncher já captura `callId` e notifica o VT após criar o ticket; o lado VoiceTranscriber permanece como próxima etapa.
 >
 > **Data de referência:** 2026-06-22
 > **Projetos:** `C:\Dev\TicketLauncher` (extensão Chrome) e `C:\Dev\VoiceTranscriber` (API Node + worker Python)
@@ -19,7 +20,7 @@
 1. Atendente clica no bubble  →  ticket criado no Bling
 2. Extensão captura { callId, ticketNumber, ticketId } e envia ao VoiceTranscriber (VT)
 3. VT recebe os dados e consulta a API do CallSys com o callId p/ obter os dados da ligação
-4. VT cria a ligação em `awaiting_callsys` e a coloca em polling (job por call_id)
+4. VT cria a ligação em `awaiting_callsys`, grava `record_link` como `audio_url`, e coloca em polling (job por call_id)
 5. Quando o polling detecta a ligação concluída → promove para `received` e enfileira a transcrição
 ```
 
@@ -45,11 +46,12 @@ A análise mostrou que **quase toda a maquinaria já existe**; a integração é
 
 ### 0.4 O que falta (trabalho real de implementação)
 
-1. **Endpoint novo no VT** que recebe `{ callId, ticketNumber, ticketId }` e **orquestra**: consulta CallSys → cria `awaiting_callsys` → agenda poll → grava o vínculo do ticket.
-2. **Resolução da URL de áudio (a única lacuna arquitetural real).** O schema exige `audio_url`; no fluxo da extensão **não há `recording_url` de webhook**. O áudio precisa vir do `record_link` do relatório CallSys, disponível **só depois** que a ligação termina (durante o polling). Hoje o código **propositalmente não** usa `record_link` como `audio_url`. Ver **§3.5** — é o ponto que exige mudança no pipeline, não só rota nova.
-3. **Captura do `callId` no TicketLauncher** (scraper) e disparo (**§3.2/§3.3**).
-4. **Coexistência com o webhook legado** sem dupla transcrição da mesma ligação (**§3.6**).
-5. **Coluna para o ID interno do ticket Bling** (`ticket_transcricao` só guarda o número) e **tabela-ponte** como registro autoritativo do vínculo (**§3.7**).
+1. **Endpoint novo no VT** que recebe `{ callId, ticketNumber, ticketId }` e **orquestra**: consulta CallSys → grava `record_link` como `audio_url` → cria `awaiting_callsys` → agenda poll → grava o vínculo do ticket.
+2. **Captura do `callId` no TicketLauncher** (scraper) e disparo (**§3.2/§3.3**).
+3. **Extração de `persistCallsysDeferredAwaitingRow`** para módulo compartilhado (`seedAwaitingCall.util.js`) consumido tanto pelo webhook quanto pelo novo endpoint.
+4. **Migrations** para colunas `bling_ticket_*` e tabela-ponte `callsys_ticket_links`.
+
+> A lacuna da URL de áudio (§3.5) está **encerrada** — `record_link` é gravado como `audio_url` no seed do endpoint, sem mudanças no pipeline de polling.
 
 ---
 
@@ -126,14 +128,14 @@ Colunas de ticket já existentes (migration 004) e já no whitelist de update (`
 
 | Coluna | Tipo | Origem hoje | Observação |
 | --- | --- | --- | --- |
-| `ticket_transcricao` | VARCHAR(128) | worker Python (extrai do .txt) | **risco de colisão** se a integração escrever aqui |
+| `ticket_transcricao` | VARCHAR(128) | worker Python (extrai do .txt) | **não reusar** — risco de colisão com o worker |
 | `cnpj_transcricao` | VARCHAR(20) | worker Python | idem |
 
-**Colisão semântica:** essas colunas são preenchidas pelo **worker** a partir do texto da transcrição. Se a integração gravar nelas, worker e integração podem se sobrescrever. Recomendação (§3.7): **colunas dedicadas** `bling_ticket_*` para a fonte autoritativa (extensão), preservando `ticket_transcricao` como o "palpite" do worker (permite reconciliação/auditoria).
+**Colunas dedicadas aprovadas (§3.7):** `bling_ticket_numero`, `bling_ticket_id`, `bling_ticket_cnpj`, `bling_ticket_synced_at`. As colunas do worker Python permanecem intactas para reconciliação/auditoria.
 
 ### 2.5 Timing — RESOLVIDO pelo novo fluxo
 
-No fluxo invertido a ligação **está sempre ativa** quando a extensão dispara (o atendente acabou de criar o ticket durante a chamada). O VT cria a linha proativamente em `awaiting_callsys` e faz o polling até concluir. **O problema de timing da revisão anterior deixa de existir.** A tabela-ponte (Opção B) passa a ser **registro autoritativo do vínculo ligação ↔ ticket**, não mais mitigação de timing.
+No fluxo invertido a ligação **está sempre ativa** quando a extensão dispara (o atendente acabou de criar o ticket durante a chamada). O VT cria a linha proativamente em `awaiting_callsys` e faz o polling até concluir. **O problema de timing da revisão anterior deixa de existir.** A tabela-ponte (§3.7) passa a ser **registro autoritativo do vínculo ligação ↔ ticket**, não mais mitigação de timing.
 
 ---
 
@@ -161,7 +163,7 @@ No fluxo invertido a ligação **está sempre ativa** quando a extensão dispara
 | `ticketId` | `ITicketResult.ticketId` | sim | vínculo do ticket |
 | `cnpj` | `currentCnpj` | não | auditoria / `bling_ticket_cnpj` |
 | `companyName` | `currentCompany.name` | não | log |
-| `source` | constante | não | compõe `source_key` (ver §3.6) |
+| `source` | constante | não | auditoria/log apenas — **não** particiona unicidade (ver §3.6) |
 
 Resposta esperada: `202 { status: "accepted", callId, awaiting_callsys: true }` (orquestração assíncrona) ou `409 { status: "duplicate" }` se já houver linha para o `call_id`/`source_key`.
 
@@ -197,48 +199,46 @@ Resposta esperada: `202 { status: "accepted", callId, awaiting_callsys: true }` 
 1. **Validar** o body (`callId` + `ticketNumber` obrigatórios) → 400 se faltar.
 2. **Registrar o vínculo** do ticket de forma autoritativa (tabela-ponte `callsys_ticket_links`, §3.7) — idempotente por `call_id`. Isso garante que o vínculo nunca se perde, independentemente do resultado da transcrição.
 3. **Consultar o CallSys** com `fetchCallsysExtensionCallReport(callId)` (§2.2) para obter os dados da ligação (status, phone, document, datas, `record_link`, etc.).
-4. **Construir o payload normalizado** a partir da `row` do relatório (reusando `normalizePayload` + `mergeCallsysReportIntoNormalized`), preenchendo `company_id`/`branch_id` com os defaults de env e `source_key` conforme §3.6.
-5. **Semear a trilha de polling**: chamar a **mesma** função usada pelo webhook ONCALL — `persistCallsysDeferredAwaitingRow(normalized, "Ligacao ativa; iniciada pela extensão")` — que cria a linha `awaiting_callsys`, seta os campos do poll e **agenda o job** `enqueueCallsysPerCallPollJob`. Gravar também as colunas `bling_ticket_*` (§3.7) nessa criação/seed.
-6. **Responder 202** imediatamente. O restante (polling → conclusão → transcrição) corre de forma assíncrona pela trilha existente (§2.3).
+4. **Gravar `record_link` como `audio_url`** antes de criar a linha — `resolveCallsysRecordLink(report)` já lê o campo correto. Ver §3.5.
+5. **Construir o payload normalizado** a partir da `row` do relatório (reusando `normalizePayload` + `mergeCallsysReportIntoNormalized`), preenchendo `company_id`/`branch_id` com os defaults de env e `source_key` conforme §3.6.
+6. **Semear a trilha de polling**: chamar a **mesma** função usada pelo webhook ONCALL — `seedAwaitingCall(normalized, "Ligacao ativa; iniciada pela extensão")` (extraída de `processCallEndedWebhook.usecase.js`, ver §3.4 nota abaixo) — que cria a linha `awaiting_callsys` com `audio_url` já populado, seta os campos do poll e **agenda o job** `enqueueCallsysPerCallPollJob`. Gravar também as colunas `bling_ticket_*` (§3.7) nessa criação/seed.
+7. **Responder 202** imediatamente. O restante (polling → conclusão → transcrição) corre de forma assíncrona pela trilha existente (§2.3).
 
-> **Reuso vs. duplicação:** o ideal é **extrair** `persistCallsysDeferredAwaitingRow` (hoje privada em `processCallEndedWebhook.usecase.js`) para um módulo compartilhável (ex.: `modules/callsys/seedAwaitingCall.util.js`) e consumi-la tanto no webhook quanto no novo endpoint, evitando divergência. Esta refatoração é interna ao VT e **não** altera o comportamento do webhook.
+> **Reuso por extração (aprovado §5.6):** extrair `persistCallsysDeferredAwaitingRow` (hoje privada em `processCallEndedWebhook.usecase.js`) para `modules/callsys/seedAwaitingCall.util.js` e consumi-la tanto no webhook quanto no novo endpoint, evitando divergência. Esta refatoração é interna ao VT e **não** altera o comportamento do webhook.
 
-**Decisão — disparar o poll na hora vs. esperar o agendamento:** `persistCallsysDeferredAwaitingRow` agenda o primeiro poll para `callsys_next_poll_at`. Como a ligação ainda está ativa, o primeiro poll provavelmente retornará `deferred` e reagendará — comportamento correto. Não é preciso poll imediato.
+**Decisão — disparar o poll na hora vs. esperar o agendamento:** `seedAwaitingCall` agenda o primeiro poll para `callsys_next_poll_at`. Como a ligação ainda está ativa, o primeiro poll provavelmente retornará `deferred` e reagendará — comportamento correto. Não é preciso poll imediato.
 
-### 3.5 A lacuna real — origem da URL de áudio
+### 3.5 Origem da URL de áudio — RESOLVIDA (Opção A aprovada)
 
-O schema normalizado exige **`audio_url` (minLength 1)** (`webhook-call-ended.v1.schema.json`) e o pipeline baixa o áudio dessa URL (`audioDownload.service.js → downloadAudioToPath(audioUrl, ...)`). No fluxo do webhook, `audio_url` **sempre** vem do webhook (`calls[*].call.recording_url`). No fluxo da extensão **não há webhook**, logo **não há `recording_url`**.
+**Validação real:** `record_link` é retornado pelo `/report/queuecalls` **mesmo com a ligação em andamento** (`status: "ONCALL"`, `finished: false`). Response real observado:
 
-Fatos do código:
+```json
+{
+  "status": "ONCALL",
+  "finished": false,
+  "datetime_end": null,
+  "record_link": "https://bling.callsys.com.br/app/api/integra/record/IN/3317506/1782138434.4052"
+}
+```
 
-- O relatório CallSys traz `record_link` (URL da gravação) — `resolveCallsysRecordLink(report)` existe em `callsysCallFinalize.util.js`.
-- Mas `mergeCallsysReportIntoNormalized` **propositalmente não** usa `record_link` como `audio_url` (comentário: *"a URL de audio e sempre a do webhook"*), e o poll resolve `audio_url` a partir de `claimedCall.audio_url` (semeado pelo webhook). Sem webhook, fica vazio → o pipeline não tem o que baixar.
+**Opção A aprovada:** no seed feito pelo endpoint da extensão, gravar `record_link` (lido via `resolveCallsysRecordLink(report)`) como `audio_url` na criação da linha `awaiting_callsys`. O `audio_url` fica populado desde o seed.
 
-**Portanto, a mudança central no VT é:** no fluxo iniciado pela extensão, adotar `record_link` como `audio_url` quando não existir áudio de webhook. Opções:
+**Consequências:**
+- O pipeline de polling (`runCallsysPerCallPoll.usecase.js`) lê `claimedCall.audio_url` — já estará preenchido, **sem nenhuma mudança necessária no polling**.
+- `mergeCallsysReportIntoNormalized` **não é alterado** (continua ignorando `record_link` como `audio_url` no caminho do webhook — comportamento correto e intacto).
+- A gravação de `audio_url = record_link` é responsabilidade exclusiva do `linkCallsysTicket.usecase.js` (passo 4 de §3.4), isolada no fluxo da extensão.
 
-- **Opção A (recomendada, cirúrgica):** no poll/seed, quando `source_key` indicar origem "extensão" **e** não houver `audio_url`, usar `resolveCallsysRecordLink(report)` como `audio_url`/`url_record` antes da validação pós-merge. Mantém o comportamento do webhook intacto (só muda quando não há áudio de webhook).
-- **Opção B (mais ampla):** tornar `record_link` um fallback geral de `audio_url` em `mergeCallsysReportIntoNormalized` quando o webhook não trouxe áudio. Mais simples, porém altera o caminho legado — exige regressão cuidadosa.
+**A lacuna arquitetural está encerrada. Polling e webhook seguem sem mudanças.**
 
-**Validações obrigatórias antes de implementar:**
+### 3.6 Coexistência com o webhook legado — DECIDIDO
 
-1. Confirmar que `record_link` da `row` de `queuecalls` é uma URL **baixável** (mesmo formato que o `recording_url` do webhook) e que `CALLSYS_REPORT_ALLOWED_HOSTS`/auth cobrem o download.
-2. Confirmar que `record_link` **só** aparece após a ligação encerrar (esperado), e que o gate `continue` coincide com `record_link` já presente.
+**Decisão: mesmo `source_key` para webhook e extensão.**
 
-### 3.6 Coexistência com o webhook legado (evitar dupla transcrição)
+Enquanto webhook e extensão coexistem, ambos usam o **mesmo `source_key`** (configurável via env, ex.: `"default"`). A unicidade `UNIQUE (call_id, source_key)` garante que o segundo a chegar para a mesma ligação receba `duplicate` (409) e não reprocesse. Sem dupla transcrição, sem lógica extra de dedupe.
 
-O webhook permanece ativo. A unicidade é `UNIQUE (call_id, source_key)`:
+O campo `source` do payload da extensão (§3.1) serve apenas para **auditoria/log**, não para particionar a unicidade.
 
-- Se a extensão usar `source_key = "ticketlauncher"` e o webhook usar o seu (default `"default"`), **haverá duas linhas para o mesmo `call_id`** → **duas transcrições** do mesmo áudio (desperdício + storage duplicado).
-
-**Opções:**
-
-| Opção | Efeito | Recomendação |
-| --- | --- | --- |
-| **Mesmo `source_key`** nos dois caminhos (ex.: ambos `"default"`) | `idempotency_key` colide → o segundo a chegar vira `duplicate`. Exactly-once por `call_id`. | **Recomendada** enquanto os dois caminhos coexistem |
-| `source_key` distinto + dedupe a montante | Duas linhas; exige lógica extra para suprimir a duplicada | Evitar |
-| Desligar o webhook para os agentes piloto | Sem colisão, mas perde o paralelo/legado | Só se o piloto exigir |
-
-> Recomendação: enquanto webhook e extensão coexistem, **usar o mesmo `source_key`** (configurável via env no VT) para que a primeira origem a registrar a ligação vença e a segunda seja `duplicate` — sem dupla transcrição. O campo `source`/`source_key` do payload (§3.1) fica só para auditoria, **não** para particionar a unicidade. **Decisão a confirmar.**
+> Variável de env sugerida: `INTEGRATION_TICKET_SOURCE_KEY` (default idêntico ao `DEFAULT_SOURCE_KEY` do webhook).
 
 ### 3.7 Banco de dados — colunas e tabela-ponte
 
@@ -254,7 +254,7 @@ ALTER TABLE calls
 
 + acrescentar essas colunas ao whitelist `extractCallColumnUpdates` (`pgRuntimeRepository.js:400+`).
 
-**Tabela-ponte (registro autoritativo do vínculo)** — recomendada:
+**Tabela-ponte (registro autoritativo do vínculo):**
 
 ```sql
 CREATE TABLE callsys_ticket_links (
@@ -270,14 +270,22 @@ CREATE TABLE callsys_ticket_links (
 );
 ```
 
-O endpoint grava aqui **sempre** (passo 2 do §3.4) e espelha em `calls.bling_ticket_*` na criação/seed e/ou na promoção. Assim o vínculo é preservado mesmo que a transcrição falhe ou seja `skip`.
+O endpoint grava aqui **sempre** (passo 2 do §3.4) e espelha em `calls.bling_ticket_*` na criação/seed. Assim o vínculo é preservado mesmo que a transcrição falhe ou seja `skip`.
 
-### 3.8 Autenticação do endpoint
+### 3.8 Autenticação do endpoint — DECIDIDO
 
-- **Recomendada:** **token de header dedicado** (`INTEGRATION_API_TOKEN`, header `x-integration-token` ou `Authorization: Bearer`), comparação timing-safe reaproveitando o util de `webhookSecretAuth.middleware.js`. Montar a rota **fora** do middleware de operador — ex. `app.use("/v1/integrations", integrationTokenAuthMiddleware, integrationRoutes)` **antes** de aplicar o operador, ou em prefixo próprio.
-- **Alternativa de baixo custo:** reutilizar `webhookSecretAuthMiddleware` e expor como `POST /webhooks/callsys-ticket`. Menos código, mas mistura semântica e compartilha `WEBHOOK_SECRET`.
-- **Segredo na extensão:** evitar hard-code no bundle em produção; preferir `chrome.storage` + tela de opções; tráfego sempre **HTTPS** (tunnel Cloudflare em prod — `docs/guia-cloudflare-tunnel-local.md`). Registrar como item de segurança.
-- **`host_permissions` (manifest):** adicionar o host do VT (`http://127.0.0.1:3000/*` em dev e/ou o domínio do tunnel em prod). Sem isso o `fetch` no service worker é bloqueado.
+**Token dedicado:**
+- Variável de ambiente: `INTEGRATION_API_TOKEN`
+- Header: `x-integration-token`
+- Middleware: `integrationTokenAuth` independente, reutilizando o utilitário de comparação timing-safe de `webhookSecretAuth.middleware.js`
+- Montagem: `app.use("/v1/integrations", integrationTokenAuthMiddleware, integrationRoutes)` **antes** do middleware de operador ou em prefixo próprio
+
+**Não compartilhar o `WEBHOOK_SECRET`.**
+
+**Segredo na extensão:**
+O token **não é versionado nem embutido no bundle**. A extensão lê `chrome.storage.local["voiceTranscriberIntegrationToken"]` e envia o valor no header `x-integration-token`. Enquanto não houver tela de opções, a configuração é manual. Tráfego sempre **HTTPS** em produção (tunnel Cloudflare — `docs/guia-cloudflare-tunnel-local.md`).
+
+**`host_permissions` (manifest):** adicionar o host do VT (`http://127.0.0.1:3000/*` em dev e/ou o domínio do tunnel em prod). Sem isso o `fetch` no service worker é bloqueado.
 
 ### 3.9 Tratamento de erros
 
@@ -291,13 +299,13 @@ Princípio: **o ticket no Bling já foi criado; nada na integração pode bloque
 | Falha de auth (401) | Log de erro; sem impacto no usuário. Sinaliza segredo/URL mal configurados. |
 | `record_link` nunca aparece / ligação não conclui | Poll esgota (`callsys_poll_exhausted`) como hoje; vínculo permanece registrado. |
 
-- **Visibilidade ao usuário:** silenciosa por padrão. Indicador discreto de sincronização é opcional (fora do escopo mínimo).
+- **Visibilidade ao usuário:** silenciosa — **decisão confirmada (§5.7)**. Nenhum indicador de sincronização.
 - **Idempotência:** endpoint idempotente por `call_id` (tabela-ponte UNIQUE + `createCall` já trata corrida → `duplicate`). Retry seguro.
 - **Resiliência opcional:** 1–2 tentativas com backoff no use case da extensão, ainda fire-and-forget.
 
 ---
 
-## 4. Arquivos a criar / modificar (sem criar ainda)
+## 4. Arquivos a criar / modificar
 
 **TicketLauncher** (`C:\Dev\TicketLauncher`)
 
@@ -309,48 +317,96 @@ Princípio: **o ticket no Bling já foi criado; nada na integração pode bloque
 | modificar | `src/infrastructure/callsys.scraper.ts` | `extractCallId(): string \| null` |
 | modificar | `src/shared/config.ts` | bloco `voiceTranscriber` + `callsys.selectors.callIdChip` |
 | modificar | `src/content.ts` | disparo fire-and-forget após `createTicket` (§3.3) |
-| modificar | `manifest.json` | host do VT em `host_permissions` |
-| modificar (docs) | `docs/architecture/*`, `CHANGELOG.md` | registrar a integração |
+| modificar | `manifest.json` | host do VT em `host_permissions` + permissão `storage` |
+| modificar (docs) | `docs/architecture/decisions.md`, `CHANGELOG.md` | ADR do armazenamento local do token + registro da integração |
 
 **VoiceTranscriber** (`C:\Dev\VoiceTranscriber`)
 
 | Ação | Arquivo | Conteúdo |
 | --- | --- | --- |
 | criar | `node-api/src/routes/integration.routes.js` | rota `POST /v1/integrations/callsys-ticket` |
-| criar | `node-api/src/middleware/integrationTokenAuth.middleware.js` | auth por token dedicado (ou reuso do webhook) |
-| criar | `node-api/src/modules/integrations/usecases/linkCallsysTicket.usecase.js` | orquestração §3.4 (vínculo → CallSys → seed → poll) |
-| criar | `node-api/src/modules/callsys/seedAwaitingCall.util.js` | **extração** de `persistCallsysDeferredAwaitingRow` p/ reuso (§3.4) |
+| criar | `node-api/src/middleware/integrationTokenAuth.middleware.js` | auth por `INTEGRATION_API_TOKEN`, timing-safe |
+| criar | `node-api/src/modules/integrations/usecases/linkCallsysTicket.usecase.js` | orquestração §3.4 (vínculo → CallSys → `audio_url` → seed → poll) |
+| criar | `node-api/src/modules/callsys/seedAwaitingCall.util.js` | **extração** de `persistCallsysDeferredAwaitingRow` p/ reuso (§5.6) |
 | criar | `packages/database/postgres/migrations/011__calls_bling_ticket_columns.sql` (+ espelho MySQL) | colunas `bling_ticket_*` |
-| criar | `packages/database/postgres/migrations/0xx__callsys_ticket_links.sql` (+ espelho MySQL) | tabela-ponte |
+| criar | `packages/database/postgres/migrations/012__callsys_ticket_links.sql` (+ espelho MySQL) | tabela-ponte |
 | modificar | `node-api/src/modules/webhook/usecases/processCallEndedWebhook.usecase.js` | passar a consumir `seedAwaitingCall.util.js` (sem mudar comportamento) |
-| modificar | `node-api/src/modules/callsys/usecases/runCallsysPerCallPoll.usecase.js` **e/ou** `modules/webhook/utils/callsysCallFinalize.util.js` | adotar `record_link` como `audio_url` no fluxo da extensão (§3.5) |
 | modificar | `node-api/src/repositories/runtime/pgRuntimeRepository.js` | whitelist `bling_ticket_*` + métodos da tabela-ponte |
 | modificar | `node-api/src/server.js` | montar `/v1/integrations` sob `integrationTokenAuth` |
-| modificar | `node-api/.env.example` | `INTEGRATION_API_TOKEN`, `INTEGRATION_TICKET_SOURCE_KEY` (§3.6), e garantir `CALLSYS_REPORT_API_URL/TOKEN` configurados |
-| modificar (docs) | `docs/` | referência da nova integração |
+| modificar | `node-api/.env.example` | `INTEGRATION_API_TOKEN`, `INTEGRATION_TICKET_SOURCE_KEY`, garantir `CALLSYS_REPORT_API_URL/TOKEN` |
+| modificar (docs) | `docs/architecture/decisions.md`, `CHANGELOG.md` | referência da nova integração |
 
 > **Pré-requisito operacional:** a consulta ao CallSys exige `CALLSYS_REPORT_API_URL` + `CALLSYS_REPORT_API_TOKEN` configurados (`isCallsysExtensionReportConfigured()`), e `CALLSYS_POLL_ENABLED=true` para o worker de poll por ligação. Sem isso, o novo fluxo não consegue obter os dados da ligação nem promovê-la.
 
 ---
 
-## 5. Decisões em aberto (para a revisão)
+## 5. Decisões em aberto — TODAS FECHADAS
 
-1. **Origem do áudio (§3.5):** Opção A (cirúrgica, só fluxo extensão) vs. Opção B (fallback geral). **Bloqueante** — é a lacuna arquitetural real. Requer validar que `record_link` é baixável e surge ao fim da ligação.
-2. **Coexistência com webhook (§3.6):** mesmo `source_key` (exactly-once, recomendado) vs. partições distintas vs. desligar webhook no piloto.
-3. **Auth do endpoint (§3.8):** token dedicado (recomendado) vs. reuso do `WEBHOOK_SECRET`.
-4. **Segredo na extensão:** `chrome.storage`/opções vs. hard-code.
-5. **Colunas dedicadas `bling_ticket_*` (§3.7)** vs. reusar `ticket_transcricao`/`cnpj_transcricao` (risco de colisão com o worker).
-6. **Reuso por extração** de `persistCallsysDeferredAwaitingRow` (recomendado) vs. duplicar a lógica de seed.
-7. **UX:** integração 100% silenciosa vs. indicador discreto de sincronização.
+1. **Origem do áudio (§3.5):** ✅ **Opção A aprovada.** `record_link` disponível mesmo com ligação `ONCALL`. Gravado como `audio_url` no seed do endpoint da extensão. Polling e webhook sem mudanças.
+
+2. **Coexistência com webhook (§3.6):** ✅ **Mesmo `source_key`** para webhook e extensão. Primeiro a chegar cria a linha; segundo recebe `duplicate` (409). Zero dupla transcrição. Campo `source` do payload é só auditoria.
+
+3. **Auth do endpoint (§3.8):** ✅ **Token dedicado** `INTEGRATION_API_TOKEN`, header `x-integration-token`, middleware `integrationTokenAuth` independente com comparação timing-safe. Sem compartilhar `WEBHOOK_SECRET`.
+
+4. **Segredo na extensão:** ✅ **Token em `chrome.storage.local`**. Nada de segredo versionado ou embutido no bundle; tela de opções fica como melhoria futura.
+
+5. **Colunas `bling_ticket_*` (§3.7):** ✅ **Colunas dedicadas aprovadas.** `bling_ticket_numero`, `bling_ticket_id`, `bling_ticket_cnpj`, `bling_ticket_synced_at`. Colunas `ticket_transcricao`/`cnpj_transcricao` do worker Python preservadas intactas.
+
+6. **Reuso por extração (§3.4):** ✅ **Extração aprovada.** `persistCallsysDeferredAwaitingRow` será extraída para `modules/callsys/seedAwaitingCall.util.js`, consumida pelo webhook e pelo novo endpoint. Sem duplicação de lógica.
+
+7. **UX:** ✅ **100% silenciosa.** Nenhum indicador de sincronização no widget por ora.
 
 ---
 
-## 6. Próximo passo
+## 6. Ordem de implementação
 
-Aprovar este plano e decidir os itens do §5. Ordem sugerida de implementação:
+### Fase 1 — VoiceTranscriber: migrations
 
-1. **VT — validação da lacuna de áudio (§3.5):** provar, com uma ligação real, que `record_link` do `queuecalls` é baixável e aparece ao encerrar. Define a Opção A/B.
-2. **VT — migrations** (`bling_ticket_*` + tabela-ponte) e whitelist.
-3. **VT — refator de reuso** (`seedAwaitingCall.util.js`) + endpoint + auth + adoção de `record_link`.
-4. **TicketLauncher — scraper `extractCallId` + use case + disparo + manifest/config**.
-5. **Teste ponta-a-ponta** com `CALLSYS_REPORT_*` e `CALLSYS_POLL_ENABLED` ligados, validando a coexistência com o webhook (§3.6).
+- Colunas `bling_ticket_numero`, `bling_ticket_id`, `bling_ticket_cnpj`, `bling_ticket_synced_at` na tabela `calls` (migration `011`)
+- Tabela `callsys_ticket_links` (migration `012`)
+- Adicionar `bling_ticket_*` ao whitelist `extractCallColumnUpdates` em `pgRuntimeRepository.js`
+
+### Fase 2 — VoiceTranscriber: refatoração de reuso
+
+- Extrair `persistCallsysDeferredAwaitingRow` para `modules/callsys/seedAwaitingCall.util.js`
+- Webhook passa a consumir o util — **zero mudança de comportamento**
+
+### Fase 3 — VoiceTranscriber: endpoint + auth
+
+- Middleware `integrationTokenAuth` (`x-integration-token`, `INTEGRATION_API_TOKEN`, timing-safe)
+- Rota `POST /v1/integrations/callsys-ticket` em `integration.routes.js`
+- Use case `linkCallsysTicket.usecase.js`:
+  - valida body
+  - grava `callsys_ticket_links`
+  - chama `fetchCallsysExtensionCallReport(callId)`
+  - lê `record_link` via `resolveCallsysRecordLink(report)` → inclui como `audio_url` no normalized
+  - chama `seedAwaitingCall` com `audio_url` populado
+  - grava `bling_ticket_*` na linha criada
+  - responde 202
+- Montar em `server.js` **fora/antes** do middleware de operador
+- Atualizar `node-api/.env.example` com `INTEGRATION_API_TOKEN`, `INTEGRATION_TICKET_SOURCE_KEY`
+
+### Fase 4 — TicketLauncher: scraper + integração
+
+- `extractCallId(): string | null` em `callsys.scraper.ts` (seletor `.text-chip.vs-chip--text`, regex `/^\s*Cód:\s*(\d+)/i`)
+- `Config.callsys.selectors.callIdChip` e bloco `voiceTranscriber` em `config.ts`
+- Tipo `ITicketLinkPayload` em `types.ts`
+- `VoiceTranscriberApi` em `infrastructure/voicetranscriber.api.ts`
+- `NotifyTranscriberUseCase` em `domain/usecases/notify-transcriber.usecase.ts`
+- Disparo fire-and-forget em `content.ts` após `createTicket` (§3.3)
+- Host do VT em `host_permissions` no `manifest.json`
+- Permissão `storage` no `manifest.json`
+- Token lido de `chrome.storage.local["voiceTranscriberIntegrationToken"]`
+
+### Fase 5 — Teste ponta-a-ponta
+
+- Confirmar `CALLSYS_REPORT_API_URL`, `CALLSYS_REPORT_API_TOKEN` e `CALLSYS_POLL_ENABLED=true` configurados
+- Criar ligação real, acionar o bubble, criar ticket
+- Verificar linha `awaiting_callsys` criada, `audio_url` populado com `record_link` e poll agendado
+- Verificar coexistência com webhook: segundo a chegar retorna `duplicate` (409)
+- Aguardar conclusão da ligação e verificar promoção para `received` → transcrição
+
+### Fase 6 — Documentação
+
+- ADR em `docs/architecture/decisions.md`: registrar a integração e o armazenamento local do token
+- `CHANGELOG.md` nos dois projetos (TicketLauncher e VoiceTranscriber)

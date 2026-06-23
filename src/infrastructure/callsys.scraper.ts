@@ -18,4 +18,20 @@ export class CallsysScraper {
 
 		return null;
 	}
+
+	extractCallId(): string | null {
+		const chips = document.querySelectorAll<HTMLElement>(
+			Config.callsys.selectors.callIdChip
+		);
+
+		for (const chip of chips) {
+			const text = chip.textContent ?? "";
+			const match = /^\s*Cód:\s*(\d+)/i.exec(text);
+			if (match) {
+				return match[1] ?? null;
+			}
+		}
+
+		return null;
+	}
 }

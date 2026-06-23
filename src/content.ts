@@ -1,14 +1,17 @@
 import { Panel } from "./presentation/panel";
 import { CompanyUseCase } from "./domain/usecases/company.usecase";
 import { TicketUseCase } from "./domain/usecases/ticket.usecase";
+import { NotifyTranscriberUseCase } from "./domain/usecases/notify-transcriber.usecase";
 import { CallsysScraper } from "./infrastructure/callsys.scraper";
-import { MESSAGES } from "./shared/constants";
+import { VoiceTranscriberApi } from "./infrastructure/voicetranscriber.api";
+import { LOG_MESSAGES, MESSAGES } from "./shared/constants";
 import type { CompanyEntity } from "./domain/entities/company.entity";
 
 const panel = new Panel();
 const scraper = new CallsysScraper();
 const companyUseCase = new CompanyUseCase();
 const ticketUseCase = new TicketUseCase();
+const notifyTranscriberUseCase = new NotifyTranscriberUseCase(new VoiceTranscriberApi());
 
 document.body.appendChild(panel.element);
 
@@ -71,6 +74,12 @@ async function submitTicket(): Promise<void> {
 	try {
 		const result = await ticketUseCase.createTicket(currentCompany, message);
 		panel.showTicketCreated(result.ticketNumber);
+		const callId = scraper.extractCallId();
+		if (callId) {
+			void notifyTranscriberUseCase
+				.linkTicket({ callId, result, cnpj: currentCnpj, company: currentCompany })
+				.catch((err: unknown) => console.warn(LOG_MESSAGES.voiceTranscriberNotifyFailed, err));
+		}
 	} catch {
 		panel.showInlineError(MESSAGES.error.ticketError);
 	}

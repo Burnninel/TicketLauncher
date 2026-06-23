@@ -13,6 +13,8 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/) e o projeto adot
 - Campo CNPJ / CPF no painel, pré-preenchido na abertura e editável (re-busca a empresa ao confirmar)
 - Banner de sucesso com botão "Criar outro ticket"
 - Ícones SVG inline (`src/presentation/icons.ts`)
+- Integração fire-and-forget com VoiceTranscriber após criação do ticket, incluindo captura de `callId` no CallSys
+- Armazenamento local do token de integração via `chrome.storage.local`, sem versionar segredo no bundle
 
 ### Removed
 - Emojis dos estados da UI, substituídos por SVGs

@@ -3,6 +3,9 @@
 	"version": "1.0.0",
 	"manifest_version": 3,
 	"description": "Cria tickets de suporte no Bling com um clique",
+	"permissions": [
+		"storage"
+	],
 	"icons": {
 		"16": "assets/icon-16.png",
 		"48": "assets/icon-48.png",
@@ -10,7 +13,8 @@
 	},
 	"host_permissions": [
 		"https://bling.callsys.com.br/*",
-		"https://www.bling.com.br/*"
+		"https://www.bling.com.br/*",
+		"http://127.0.0.1:3000/*"
 	],
 	"background": {
 		"service_worker": "background.js"

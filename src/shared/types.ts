@@ -58,6 +58,16 @@ export interface IProxyResponse {
 	error?: string;
 }
 
+// VoiceTranscriber integration payload
+export interface ITicketLinkPayload {
+	callId: string;
+	ticketNumber: string;
+	ticketId: string;
+	cnpj?: string | undefined;
+	companyName?: string | undefined;
+	source: "ticketlauncher";
+}
+
 // Status panel states
 export type PanelState =
 	| "idle"
