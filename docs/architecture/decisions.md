@@ -48,11 +48,11 @@ Cada decisão técnica relevante é registrada aqui no formato ADR (Architecture
 
 **Contexto**: Shadow DOM isolaria o CSS da extensão dos estilos da página hospedeira (callsys).
 
-**Decisão**: Não usar Shadow DOM; aplicar CSS diretamente com seletores prefixados (`blg-`).
+**Decisão**: Não usar Shadow DOM; aplicar CSS diretamente com seletores prefixados (`bl-`).
 
 **Consequências**:
 - Positivas: simplicidade de implementação e depuração.
-- Negativas: risco teórico de colisão de estilos, mitigado pelo prefixo `blg-` em todos os seletores. A complexidade do Shadow DOM não se justificou frente ao benefício.
+- Negativas: risco teórico de colisão de estilos, mitigado pelo prefixo `bl-` em todos os seletores (e `--bl-` nas variáveis). A complexidade do Shadow DOM não se justificou frente ao benefício.
 
 ## ADR-005: Cookies de sessão em vez de API key
 
@@ -66,3 +66,29 @@ Cada decisão técnica relevante é registrada aqui no formato ADR (Architecture
 **Consequências**:
 - Positivas: funciona com a sessão que o agente já mantém aberta, sem gestão de credenciais.
 - Negativas: o usuário precisa estar logado no Bling em outra aba; o token de sessão expira em ~5 minutos (renovado automaticamente em sessão ativa).
+
+## ADR-006: CSS modular com tokens de design
+
+**Data**: 2026-06-22
+**Status**: Aceita
+
+**Contexto**: O `styles.css` único cresceu com o redesign do bubble (identidade visual do Bling, novos estados e campos). Cores e medidas estavam espalhadas e duplicadas, dificultando manutenção e consistência.
+
+**Decisão**: Quebrar a estilização em `src/presentation/styles/` com um módulo por área (`_variables`, `_bubble`, `_panel`, `_fields`, `_states`) agregados por `index.css` via `@import`. Centralizar cores, espaços, raios e sombras em tokens `--bl-*` no `_variables.css`. O esbuild inlina os imports em um único `dist/content.css`, referenciado pelo manifest.
+
+**Consequências**:
+- Positivas: tokens reaproveitáveis, cada área de UI isolada em seu arquivo, prefixo `--bl-` evita colisão com variáveis CSS do callsys/Bling.
+- Negativas: o CSS passa a depender do build (não é mais servido direto de `src/`); é preciso rodar `npm run build` após alterar estilos.
+
+## ADR-007: Emojis substituídos por SVGs inline
+
+**Data**: 2026-06-22
+**Status**: Aceita
+
+**Contexto**: Os estados da UI usavam emojis (❌, ✅, ⚠️, 🏢), cuja renderização varia por SO/fonte e destoa da identidade visual do Bling.
+
+**Decisão**: Remover todos os emojis e usar SVGs inline (`src/presentation/icons.ts`) com `currentColor`, controlados pelo CSS. Mantém a premissa de zero dependências de runtime (ADR-003).
+
+**Consequências**:
+- Positivas: aparência consistente entre plataformas, cor controlada por CSS, sem assets externos.
+- Negativas: markup SVG no bundle (peso desprezível).

@@ -7,10 +7,10 @@ Antes de instalar, gere a pasta `dist/` com `npm run build` (veja [setup.md](set
 1. Abra o Chrome e acesse `chrome://extensions`.
 2. Ative o **"Modo do desenvolvedor"** (toggle no canto superior direito).
 3. Clique em **"Carregar sem compactação"**.
-4. Selecione a pasta **raiz do projeto** (a que contém `manifest.json`).
+4. Selecione a pasta **`dist/`** (gerada pelo build).
 5. A extensão aparece listada como **"Bling - Criar Ticket"**.
 
-> Observação: selecione a pasta que contém o `manifest.json`, não a `dist/` isolada — o manifest referencia `dist/`, `assets/` e `src/presentation/styles.css` por caminhos relativos.
+> Observação: sempre rode `npm run build` antes de carregar ou recarregar a extensão. O build copia o `manifest.json` e a pasta `assets/` para dentro de `dist/`, tornando-a autocontida.
 
 ## Verificação
 

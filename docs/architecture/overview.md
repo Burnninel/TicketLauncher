@@ -6,11 +6,18 @@ O projeto adota Clean Architecture em 4 camadas. Cada camada tem uma responsabil
 
 ```
 src/
-├── presentation/      UI injetada no DOM (bubble, painel, estados visuais)
-│   ├── bubble.ts
+├── presentation/      UI injetada no DOM (widget, painel, estados visuais)
 │   ├── panel.ts
 │   ├── status.ts
-│   └── styles.css
+│   ├── icons.ts       SVGs inline (sem emojis nem dependências externas)
+│   ├── dom.ts         Utilitário de visibilidade (.bl-hidden)
+│   └── styles/        CSS modular com tokens de design
+│       ├── _variables.css   tokens --bl-* (cores, espaços, raios, sombras)
+│       ├── _widget.css
+│       ├── _panel.css
+│       ├── _fields.css
+│       ├── _states.css
+│       └── index.css        agrega os módulos via @import (bundle único)
 ├── domain/            Entidades e casos de uso (agnóstico ao ambiente)
 │   ├── entities/
 │   │   ├── company.entity.ts

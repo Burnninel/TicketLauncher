@@ -40,8 +40,10 @@ Como o content script roda em `callsys.com.br`, ele não consegue fazer requisi�
 - Chaves PT preservadas apenas no contrato externo do Bling (XML do ticket, query params da API, campos `nome`/`numero` da resposta)
 
 ## Build
-npm run build → gera dist/content.js e dist/background.js via esbuild
+npm run build → gera dist/content.js, dist/background.js e dist/content.css via esbuild, e copia manifest.json e assets/ para dentro de dist/
 npm run typecheck → tsc --noEmit (rodar antes do build)
+O CSS é modular em src/presentation/styles/ (módulos _*.css + index.css); o esbuild inlina os @import em dist/content.css. Tokens de design ficam em _variables.css (prefixo --bl-).
+dist/ é autocontida: carregar dist/ no Chrome em dev e zipar dist/ para publicação na Chrome Web Store.
 
 ## Pontos de atenção
 - Content scripts não suportam ES Modules nativamente → tudo bundlado pelo esbuild

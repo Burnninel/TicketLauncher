@@ -1,0 +1,95 @@
+/* Feedback states: loading, success, error, plus the visibility utility.
+   NOTE: .bl-hidden is declared at the END of this file so its
+   display: none !important beats any earlier display: flex !important rule
+   that appears on the same element (same specificity → last wins). */
+
+.bl-loading {
+	display: flex !important;
+	align-items: center !important;
+	gap: 8px !important;
+	font-size: 12px !important;
+	color: var(--bl-text-muted) !important;
+	padding: 4px 0 !important;
+}
+
+.bl-loading__dots {
+	display: flex !important;
+	gap: 3px !important;
+}
+
+.bl-loading__dot {
+	width: 5px !important;
+	height: 5px !important;
+	border-radius: 50% !important;
+	background: var(--bl-green-muted) !important;
+	animation: bl-pulse 1.2s ease-in-out infinite !important;
+}
+
+.bl-loading__dot:nth-child(2) { animation-delay: 0.15s !important; }
+.bl-loading__dot:nth-child(3) { animation-delay: 0.3s !important; }
+
+@keyframes bl-pulse {
+	0%, 80%, 100% { opacity: 0.3; transform: scale(0.85); }
+	40%           { opacity: 1;   transform: scale(1); }
+}
+
+.bl-success-banner {
+	display: flex !important;
+	align-items: center !important;
+	gap: 10px !important;
+	background: var(--bl-success-bg) !important;
+	border: 0.5px solid var(--bl-success-border) !important;
+	border-radius: var(--bl-radius-sm) !important;
+	padding: 12px !important;
+	box-sizing: border-box !important;
+}
+
+.bl-success-banner__icon {
+	width: 32px !important;
+	height: 32px !important;
+	border-radius: 50% !important;
+	background: var(--bl-green) !important;
+	color: #fff !important;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	flex-shrink: 0 !important;
+}
+
+.bl-success-banner__number {
+	font-size: 14px !important;
+	font-weight: 600 !important;
+	color: var(--bl-success-text) !important;
+	margin: 0 !important;
+	line-height: normal !important;
+}
+
+.bl-success-banner__sub {
+	font-size: 11px !important;
+	color: #388E3C !important;
+	margin: 2px 0 0 !important;
+	line-height: normal !important;
+}
+
+.bl-error-msg {
+	display: flex !important;
+	align-items: center !important;
+	gap: 6px !important;
+	background: var(--bl-danger-bg) !important;
+	border: 0.5px solid var(--bl-danger-border) !important;
+	border-radius: var(--bl-radius-sm) !important;
+	padding: 8px 10px !important;
+	font-size: 12px !important;
+	color: var(--bl-danger) !important;
+	box-sizing: border-box !important;
+}
+
+.bl-error-msg__icon {
+	flex-shrink: 0 !important;
+}
+
+/* Must be last: wins the !important cascade over any display: flex/block rule
+   declared earlier in this file with the same specificity (0,1,0). */
+.bl-hidden {
+	display: none !important;
+}

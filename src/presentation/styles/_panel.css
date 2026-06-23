@@ -1,0 +1,99 @@
+/* Panel header, body and company badge.
+   Positioning is handled by .bl-widget__panel in _widget.css. */
+
+.bl-panel__header {
+	background: var(--bl-green) !important;
+	padding: 14px 16px !important;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: space-between !important;
+	box-sizing: border-box !important;
+}
+
+.bl-panel__header-left {
+	display: flex !important;
+	align-items: center !important;
+	gap: 8px !important;
+	color: #fff !important;
+}
+
+.bl-panel__title {
+	color: #fff !important;
+	font-size: 13px !important;
+	font-weight: 600 !important;
+	margin: 0 !important;
+	line-height: normal !important;
+}
+
+.bl-panel__close {
+	background: rgba(255, 255, 255, 0.15) !important;
+	border: none !important;
+	border-radius: 50% !important;
+	width: 24px !important;
+	height: 24px !important;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	cursor: pointer !important;
+	color: #fff !important;
+	flex-shrink: 0 !important;
+	transition: background var(--bl-transition) !important;
+	padding: 0 !important;
+	box-sizing: border-box !important;
+}
+
+.bl-panel__close:hover {
+	background: rgba(255, 255, 255, 0.25) !important;
+}
+
+.bl-panel__body {
+	padding: 14px 16px !important;
+	display: flex !important;
+	flex-direction: column !important;
+	gap: 12px !important;
+	box-sizing: border-box !important;
+}
+
+.bl-divider {
+	height: 0.5px !important;
+	background: var(--bl-border) !important;
+	border: none !important;
+}
+
+.bl-company-badge {
+	display: flex !important;
+	align-items: center !important;
+	gap: 8px !important;
+	background: var(--bl-green-light) !important;
+	border: 0.5px solid var(--bl-green-border) !important;
+	border-radius: var(--bl-radius-sm) !important;
+	padding: 8px 10px !important;
+	box-sizing: border-box !important;
+}
+
+.bl-company-badge__icon {
+	width: 28px !important;
+	height: 28px !important;
+	border-radius: 6px !important;
+	background: var(--bl-green) !important;
+	color: #fff !important;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	flex-shrink: 0 !important;
+}
+
+.bl-company-badge__name {
+	font-size: 13px !important;
+	font-weight: 600 !important;
+	color: var(--bl-success-text) !important;
+	margin: 0 !important;
+	line-height: normal !important;
+}
+
+.bl-company-badge__doc {
+	font-size: 11px !important;
+	color: #388E3C !important;
+	margin: 1px 0 0 !important;
+	line-height: normal !important;
+}

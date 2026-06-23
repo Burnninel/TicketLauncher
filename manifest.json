@@ -13,13 +13,13 @@
 		"https://www.bling.com.br/*"
 	],
 	"background": {
-		"service_worker": "dist/background.js"
+		"service_worker": "background.js"
 	},
 	"content_scripts": [
 		{
 			"matches": ["https://bling.callsys.com.br/omnichannel*"],
-			"js": ["dist/content.js"],
-			"css": ["src/presentation/styles.css"],
+			"js": ["content.js"],
+			"css": ["content.css"],
 			"run_at": "document_idle"
 		}
 	]

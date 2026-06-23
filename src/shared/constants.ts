@@ -13,26 +13,35 @@ export const TICKET_DEFAULTS = {
 export const HTTP_TIMEOUT_MS = 10_000;
 
 export const MESSAGES = {
-	bubble: "Iniciar Atendimento",
+	bubble: "Novo ticket",
+	panelTitle: "Novo ticket de suporte",
+	closeLabel: "Fechar painel",
+	cnpjLabel: "CNPJ / CPF",
+	cnpjEdit: "Alterar",
+	cnpjConfirm: "Confirmar",
+	descriptionLabel: "Descrição",
 	placeholder: "Descreva o atendimento...",
-	createButton: "Criar Ticket",
+	createButton: "Criar ticket",
 	creating: "Criando...",
-	emptyMessage: "⚠️ Digite uma mensagem antes de criar o ticket.",
-	companyLabel: (name: string): string => `🏢 ${name}`,
+	createAnother: "Criar outro ticket",
+	emptyMessage: "Digite uma descrição antes de criar o ticket.",
 	loading: {
 		company: "Buscando empresa...",
 		ticket: "Criando ticket...",
 	},
 	error: {
-		cnpjNotFound: "❌ CNPJ não encontrado na tela.",
-		companyNotFound: "❌ Nenhuma empresa encontrada para este CNPJ.",
-		sessionExpired: "❌ Sessão do Bling expirada. Faça login no Bling.",
-		ticketError: "❌ Erro ao criar ticket. Tente novamente.",
-		timeout: "❌ Tempo de resposta excedido. Tente novamente.",
-		generic: "❌ Erro ao consultar empresa no Bling.",
+		cnpjNotFound: "CNPJ não encontrado na tela.",
+		companyNotFound: "Nenhuma empresa encontrada para este CNPJ.",
+		sessionExpired: "Sessão do Bling expirada. Faça login no Bling.",
+		ticketError: "Erro ao criar ticket. Tente novamente.",
+		timeout: "Tempo de resposta excedido. Tente novamente.",
+		generic: "Erro ao consultar empresa no Bling.",
 	},
 	success: {
-		ticketCreated: (ticketNumber: string): string =>
-			`✅ Ticket #${ticketNumber} criado com sucesso!`,
+		ticketNumber: (ticketNumber: string): string => `Ticket #${ticketNumber}`,
+		sub: "Criado com sucesso",
+	},
+	defaults: {
+		ticketDescription: "Registro de atendimento telefônico",
 	},
 } as const;

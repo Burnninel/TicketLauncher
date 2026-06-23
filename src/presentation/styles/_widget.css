@@ -1,0 +1,64 @@
+/* Single fixed widget — the only position:fixed element.
+   Anchored bottom-right; its right and bottom edges stay at 24px regardless
+   of whether the collapsed trigger or the expanded panel is shown. */
+.bl-widget {
+	position: fixed !important;
+	bottom: 24px !important;
+	right: 24px !important;
+	z-index: 999999 !important;
+}
+
+/* ── Collapsed: pill trigger ──────────────────────────────────────────────── */
+.bl-widget__trigger {
+	display: flex !important;
+	align-items: center !important;
+	gap: 8px !important;
+	background: var(--bl-green) !important;
+	color: #fff !important;
+	border: none !important;
+	border-radius: var(--bl-radius-pill) !important;
+	padding: 12px 20px !important;
+	font-size: 13px !important;
+	font-weight: 600 !important;
+	font-family: system-ui, -apple-system, sans-serif !important;
+	cursor: pointer !important;
+	box-shadow: var(--bl-shadow-btn) !important;
+	transition: background var(--bl-transition), transform var(--bl-transition) !important;
+	white-space: nowrap !important;
+	line-height: normal !important;
+	text-transform: none !important;
+	letter-spacing: normal !important;
+	box-sizing: border-box !important;
+}
+
+.bl-widget__trigger:hover {
+	background: var(--bl-green-hover) !important;
+}
+
+.bl-widget__trigger:active {
+	transform: scale(0.97) !important;
+}
+
+.bl-widget__trigger-icon {
+	width: 16px !important;
+	height: 16px !important;
+	flex-shrink: 0 !important;
+}
+
+/* ── Expanded: panel card (grows upward from the same anchor) ─────────────── */
+.bl-widget__panel {
+	width: var(--bl-panel-width) !important;
+	background: var(--bl-surface) !important;
+	border-radius: var(--bl-radius-lg) !important;
+	border: 0.5px solid var(--bl-border) !important;
+	box-shadow: var(--bl-shadow) !important;
+	overflow: hidden !important;
+	font-family: system-ui, -apple-system, sans-serif !important;
+	box-sizing: border-box !important;
+	animation: bl-slide-up 0.2s ease !important;
+}
+
+@keyframes bl-slide-up {
+	from { opacity: 0; transform: translateY(8px); }
+	to   { opacity: 1; transform: translateY(0); }
+}

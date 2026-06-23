@@ -1,68 +1,105 @@
-import { MESSAGES } from "../shared/constants";
+import { setHidden } from "./dom";
 
 export interface IStatusElements {
+	cnpjWrapperElement: HTMLElement;
 	loadingElement: HTMLElement;
-	companyElement: HTMLElement;
+	cnpjErrorElement: HTMLElement;
+	cnpjErrorTextElement: HTMLElement;
+	companyBadgeElement: HTMLElement;
+	companyNameElement: HTMLElement;
+	companyDocElement: HTMLElement;
 	formElement: HTMLElement;
-	resultElement: HTMLElement;
+	inlineErrorElement: HTMLElement;
+	inlineErrorTextElement: HTMLElement;
+	successElement: HTMLElement;
+	successNumberElement: HTMLElement;
 }
 
-// Renders the panel states across four regions: loading, company name,
-// form and result.
+// Drives the five mutually exclusive body regions (loading / cnpj-error /
+// company+form / success) while keeping the CNPJ wrapper persistent across
+// all states except success.
 export class StatusView {
+	private readonly _cnpjWrapper: HTMLElement;
 	private readonly _loading: HTMLElement;
-	private readonly _company: HTMLElement;
+	private readonly _cnpjError: HTMLElement;
+	private readonly _cnpjErrorText: HTMLElement;
+	private readonly _companyBadge: HTMLElement;
+	private readonly _companyName: HTMLElement;
+	private readonly _companyDoc: HTMLElement;
 	private readonly _form: HTMLElement;
-	private readonly _result: HTMLElement;
+	private readonly _inlineError: HTMLElement;
+	private readonly _inlineErrorText: HTMLElement;
+	private readonly _success: HTMLElement;
+	private readonly _successNumber: HTMLElement;
 
-	constructor({ loadingElement, companyElement, formElement, resultElement }: IStatusElements) {
-		this._loading = loadingElement;
-		this._company = companyElement;
-		this._form = formElement;
-		this._result = resultElement;
+	constructor(elements: IStatusElements) {
+		this._cnpjWrapper = elements.cnpjWrapperElement;
+		this._loading = elements.loadingElement;
+		this._cnpjError = elements.cnpjErrorElement;
+		this._cnpjErrorText = elements.cnpjErrorTextElement;
+		this._companyBadge = elements.companyBadgeElement;
+		this._companyName = elements.companyNameElement;
+		this._companyDoc = elements.companyDocElement;
+		this._form = elements.formElement;
+		this._inlineError = elements.inlineErrorElement;
+		this._inlineErrorText = elements.inlineErrorTextElement;
+		this._success = elements.successElement;
+		this._successNumber = elements.successNumberElement;
 	}
 
+	// CNPJ visible, loading dots visible, everything else hidden.
 	showLoading(): void {
-		this._hideAll();
-		this._loading.hidden = false;
+		this._hideDynamic();
+		setHidden(this._cnpjWrapper, false);
+		setHidden(this._loading, false);
 	}
 
-	showCompany(companyName: string): void {
-		this._hideAll();
-		this._company.textContent = MESSAGES.companyLabel(companyName);
-		this._company.hidden = false;
-		this._form.hidden = false;
+	// CNPJ visible and locked, company badge + form visible.
+	showForm(companyName: string, companyDoc: string): void {
+		this._hideDynamic();
+		this._companyName.textContent = companyName;
+		this._companyDoc.textContent = companyDoc;
+		setHidden(this._cnpjWrapper, false);
+		setHidden(this._companyBadge, false);
+		setHidden(this._form, false);
 	}
 
-	// Fatal error: replaces the whole panel content with the message.
-	showFatalError(message: string): void {
-		this._hideAll();
-		this._renderResult(message, true);
+	// CNPJ visible and editable, error message below it, form hidden.
+	showCnpjError(message: string): void {
+		this._hideDynamic();
+		this._cnpjErrorText.textContent = message;
+		setHidden(this._cnpjWrapper, false);
+		setHidden(this._cnpjError, false);
 	}
 
-	// Inline message: keeps company and form visible (validation, creation).
-	showInlineMessage(message: string, hasError: boolean): void {
-		this._renderResult(message, hasError);
+	// Success banner only — CNPJ hidden.
+	showSuccess(ticketNumber: string): void {
+		this._hideDynamic();
+		this._successNumber.textContent = ticketNumber;
+		setHidden(this._success, false);
 	}
 
-	clearResult(): void {
-		this._result.hidden = true;
+	// Inline validation / ticket-creation error within the form.
+	showInlineError(message: string): void {
+		this._inlineErrorText.textContent = message;
+		setHidden(this._inlineError, false);
+	}
+
+	clearInlineError(): void {
+		setHidden(this._inlineError, true);
 	}
 
 	reset(): void {
-		this._hideAll();
+		this._hideDynamic();
 	}
 
-	private _hideAll(): void {
-		this._loading.hidden = true;
-		this._company.hidden = true;
-		this._form.hidden = true;
-		this._result.hidden = true;
-	}
-
-	private _renderResult(message: string, hasError: boolean): void {
-		this._result.hidden = false;
-		this._result.className = hasError ? "blg-error" : "blg-success";
-		this._result.textContent = message;
+	private _hideDynamic(): void {
+		setHidden(this._cnpjWrapper, true);
+		setHidden(this._loading, true);
+		setHidden(this._cnpjError, true);
+		setHidden(this._companyBadge, true);
+		setHidden(this._form, true);
+		setHidden(this._inlineError, true);
+		setHidden(this._success, true);
 	}
 }

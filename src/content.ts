@@ -1,4 +1,3 @@
-import { Bubble } from "./presentation/bubble";
 import { Panel } from "./presentation/panel";
 import { CompanyUseCase } from "./domain/usecases/company.usecase";
 import { TicketUseCase } from "./domain/usecases/ticket.usecase";
@@ -6,18 +5,17 @@ import { CallsysScraper } from "./infrastructure/callsys.scraper";
 import { MESSAGES } from "./shared/constants";
 import type { CompanyEntity } from "./domain/entities/company.entity";
 
-const bubble = new Bubble();
 const panel = new Panel();
 const scraper = new CallsysScraper();
 const companyUseCase = new CompanyUseCase();
 const ticketUseCase = new TicketUseCase();
 
 document.body.appendChild(panel.element);
-document.body.appendChild(bubble.element);
 
 let currentCompany: CompanyEntity | null = null;
+let currentCnpj = "";
 
-bubble.onClick(() => {
+panel.onTrigger(() => {
 	if (panel.isOpen) {
 		closePanel();
 	} else {
@@ -25,7 +23,9 @@ bubble.onClick(() => {
 	}
 });
 
+panel.onClose(() => closePanel());
 panel.onSubmit(() => void submitTicket());
+panel.onCnpjConfirm((cnpj) => void fetchCompany(cnpj));
 
 document.addEventListener("click", () => {
 	if (panel.isOpen) closePanel();
@@ -34,23 +34,24 @@ document.addEventListener("click", () => {
 function closePanel(): void {
 	panel.close();
 	currentCompany = null;
+	currentCnpj = "";
 }
 
 async function loadCompany(): Promise<void> {
 	currentCompany = null;
-	panel.open();
+	const cnpj = scraper.extractCnpj() ?? "";
+	panel.open(cnpj);
+	await fetchCompany(cnpj);
+}
 
-	const cnpj = scraper.extractCnpj();
-	if (!cnpj) {
-		panel.showCompanyError(MESSAGES.error.cnpjNotFound);
-		return;
-	}
-
+async function fetchCompany(cnpj: string): Promise<void> {
 	panel.showLoading();
 	try {
 		currentCompany = await companyUseCase.fetchCompanyByCnpj(cnpj);
-		panel.showCompany(currentCompany.name);
+		currentCnpj = cnpj;
+		panel.showCompany(currentCompany.name, cnpj);
 	} catch (error: unknown) {
+		currentCompany = null;
 		panel.showCompanyError(toCompanyErrorMessage(error));
 	}
 }
@@ -75,8 +76,6 @@ async function submitTicket(): Promise<void> {
 	}
 }
 
-// Maps the (mostly English) thrown errors to a friendly Portuguese message,
-// preserving the previous user-facing behavior.
 function toCompanyErrorMessage(error: unknown): string {
 	if (!(error instanceof Error)) return MESSAGES.error.generic;
 

@@ -1,0 +1,120 @@
+/* Form fields, inputs and buttons.
+   !important on button and input properties beats the host page's element-level
+   resets (background: transparent, border: none, color: inherit, etc.). */
+.bl-field {
+	display: flex !important;
+	flex-direction: column !important;
+	gap: 4px !important;
+	box-sizing: border-box !important;
+}
+
+.bl-field__label {
+	font-size: 11px !important;
+	font-weight: 500 !important;
+	color: var(--bl-text-secondary) !important;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: space-between !important;
+	margin: 0 !important;
+	line-height: normal !important;
+}
+
+.bl-field__edit-link {
+	font-size: 11px !important;
+	color: var(--bl-green) !important;
+	cursor: pointer !important;
+	font-weight: 400 !important;
+	background: none !important;
+	border: none !important;
+	padding: 0 !important;
+	line-height: normal !important;
+	text-decoration: none !important;
+}
+
+.bl-field__input {
+	border: 0.5px solid var(--bl-border-strong) !important;
+	border-radius: var(--bl-radius-sm) !important;
+	padding: 7px 10px !important;
+	font-size: 13px !important;
+	font-family: system-ui, -apple-system, sans-serif !important;
+	color: var(--bl-text-primary) !important;
+	background: var(--bl-surface) !important;
+	width: 100% !important;
+	transition: border-color var(--bl-transition) !important;
+	outline: none !important;
+	box-sizing: border-box !important;
+	line-height: normal !important;
+}
+
+.bl-field__input:focus {
+	border-color: var(--bl-green) !important;
+	box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.12) !important;
+	outline: none !important;
+}
+
+.bl-field__input--readonly {
+	background: var(--bl-surface-2) !important;
+	color: var(--bl-text-secondary) !important;
+	cursor: default !important;
+}
+
+.bl-field__input--locked {
+	background: var(--bl-surface-2) !important;
+	color: var(--bl-text-muted) !important;
+	pointer-events: none !important;
+}
+
+textarea.bl-field__input {
+	resize: vertical !important;
+	min-height: 72px !important;
+	line-height: 1.5 !important;
+}
+
+.bl-btn-primary {
+	background: var(--bl-green) !important;
+	color: #fff !important;
+	border: none !important;
+	border-radius: var(--bl-radius-sm) !important;
+	padding: 10px !important;
+	width: 100% !important;
+	font-size: 13px !important;
+	font-weight: 600 !important;
+	font-family: system-ui, -apple-system, sans-serif !important;
+	cursor: pointer !important;
+	transition: background var(--bl-transition) !important;
+	line-height: normal !important;
+	text-transform: none !important;
+	letter-spacing: normal !important;
+	box-sizing: border-box !important;
+}
+
+.bl-btn-primary:hover {
+	background: var(--bl-green-hover) !important;
+}
+
+.bl-btn-primary:disabled {
+	opacity: 0.5 !important;
+	cursor: not-allowed !important;
+}
+
+.bl-btn-secondary {
+	background: var(--bl-surface) !important;
+	color: var(--bl-green) !important;
+	border: 0.5px solid var(--bl-green-border) !important;
+	border-radius: var(--bl-radius-sm) !important;
+	padding: 10px !important;
+	width: 100% !important;
+	font-size: 13px !important;
+	font-weight: 600 !important;
+	font-family: system-ui, -apple-system, sans-serif !important;
+	cursor: pointer !important;
+	transition: background var(--bl-transition) !important;
+	line-height: normal !important;
+	text-transform: none !important;
+	letter-spacing: normal !important;
+	box-sizing: border-box !important;
+}
+
+.bl-btn-secondary:hover {
+	background: var(--bl-green-light) !important;
+}
