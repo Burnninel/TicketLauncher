@@ -27,10 +27,10 @@ export class VoiceTranscriberApi {
 	private async getIntegrationToken(): Promise<string> {
 		const key = Config.voiceTranscriber.tokenStorageKey;
 		const result = await chrome.storage.local.get(key);
-		const token = result[key];
+		const stored = result[key];
 
-		if (typeof token === "string" && token.trim()) {
-			return token;
+		if (typeof stored === "string" && stored.trim()) {
+			return stored;
 		}
 
 		throw new Error(INTERNAL_ERRORS.voiceTranscriberTokenMissing);

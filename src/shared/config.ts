@@ -18,7 +18,7 @@ export const Config = {
 		},
 	},
 	voiceTranscriber: {
-		baseUrl: "http://127.0.0.1:3000",
+		baseUrl: "https://voice-transcriber-api-866701498536.us-central1.run.app",
 		endpoints: {
 			linkTicket: "/v1/integrations/callsys-ticket",
 		},
@@ -29,6 +29,8 @@ export const Config = {
 		contentType: "application/json",
 		source: "ticketlauncher",
 		tokenStorageKey: "voiceTranscriberIntegrationToken",
+		// Default usado quando nenhum token foi configurado via settings page.
+		// ADR-008: substituir por UI de configuração.
 	},
 	http: {
 		timeoutMs: 10_000,

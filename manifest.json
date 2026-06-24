@@ -14,6 +14,7 @@
 	"host_permissions": [
 		"https://bling.callsys.com.br/*",
 		"https://www.bling.com.br/*",
+		"https://voice-transcriber-api-866701498536.us-central1.run.app/*",
 		"http://127.0.0.1:3000/*"
 	],
 	"background": {
