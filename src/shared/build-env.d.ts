@@ -1,0 +1,1 @@
+declare const __VOICE_TRANSCRIBER_INTEGRATION_TOKEN__: string;

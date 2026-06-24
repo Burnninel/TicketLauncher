@@ -4,7 +4,8 @@
 	"manifest_version": 3,
 	"description": "Cria tickets de suporte no Bling com um clique",
 	"permissions": [
-		"storage"
+		"storage",
+		"clipboardWrite"
 	],
 	"icons": {
 		"16": "assets/icon-16.png",

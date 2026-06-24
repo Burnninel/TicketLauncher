@@ -66,9 +66,39 @@
 
 .bl-success-banner__sub {
 	font-size: 11px !important;
-	color: #388E3C !important;
+	color: var(--bl-green) !important;
 	margin: 2px 0 0 !important;
 	line-height: normal !important;
+}
+
+.bl-success-banner__transcription {
+	display: inline-flex !important;
+	align-items: center !important;
+	margin: 8px 0 0 !important;
+	padding: 4px 8px !important;
+	border-radius: var(--bl-radius-pill) !important;
+	font-size: 11px !important;
+	font-weight: 600 !important;
+	line-height: normal !important;
+	box-sizing: border-box !important;
+}
+
+.bl-success-banner__transcription--pending {
+	background: var(--bl-surface-2) !important;
+	border: 0.5px solid var(--bl-border) !important;
+	color: var(--bl-text-secondary) !important;
+}
+
+.bl-success-banner__transcription--sent {
+	background: var(--bl-green-light) !important;
+	border: 0.5px solid var(--bl-green-border) !important;
+	color: var(--bl-success-text) !important;
+}
+
+.bl-success-banner__transcription--not-sent {
+	background: var(--bl-danger-bg) !important;
+	border: 0.5px solid var(--bl-danger-border) !important;
+	color: var(--bl-danger) !important;
 }
 
 .bl-error-msg {

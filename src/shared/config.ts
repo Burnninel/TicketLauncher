@@ -4,6 +4,8 @@ export const Config = {
 		endpoints: {
 			createTicket: "/services/tickets.server.php",
 			findCompany: "/Api/v3/adm-empresas/empresas",
+			companyDetails: "/Api/v3/adm-empresas",
+			verifySupportUser: "/Api/v3/tickets/verificausuariosuporteativo",
 		},
 		headers: {
 			"x-api-revision": "3.1.0",
@@ -28,9 +30,9 @@ export const Config = {
 		},
 		contentType: "application/json",
 		source: "ticketlauncher",
+		buildTimeIntegrationToken: __VOICE_TRANSCRIBER_INTEGRATION_TOKEN__,
 		tokenStorageKey: "voiceTranscriberIntegrationToken",
-		// Default usado quando nenhum token foi configurado via settings page.
-		// ADR-008: substituir por UI de configuração.
+		// Piloto: token pode vir do .env no build. Produção deve migrar para auth por usuário.
 	},
 	http: {
 		timeoutMs: 10_000,

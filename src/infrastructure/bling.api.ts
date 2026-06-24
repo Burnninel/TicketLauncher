@@ -4,11 +4,14 @@ import { TicketEntity } from "../domain/entities/ticket.entity";
 import { XmlBuilder } from "../shared/xml.builder";
 import { Config } from "../shared/config";
 import type {
+	IBlingCompanyDetailsResponse,
 	IBlingCompanyResponse,
+	IBlingSupportUserActiveResponse,
 	IBlingTicketResponse,
+	ISupportUserCredentials,
 	ITicketResult,
 } from "../shared/types";
-import { MESSAGES } from "../shared/constants";
+import { INTERNAL_ERRORS, MESSAGES } from "../shared/constants";
 
 export class BlingApi {
 	private readonly http: HttpClient;
@@ -48,5 +51,31 @@ export class BlingApi {
 			ticketNumber: data.numero,
 			ticketId: data.id,
 		};
+	}
+
+	async fetchSupportUserCredentials(companyId: number): Promise<ISupportUserCredentials> {
+		const isActive = await this.verifySupportUserActive();
+		if (!isActive) {
+			throw new Error(INTERNAL_ERRORS.supportUserInactive);
+		}
+
+		const url = `${Config.bling.baseUrl}${Config.bling.endpoints.companyDetails}/${companyId}`;
+		const data = await this.http.get<IBlingCompanyDetailsResponse>(url, Config.bling.headers);
+		const supportUser = data.data.usuarioSuporte;
+		const login = supportUser?.usuarioSuporteLogin?.trim();
+		const password = supportUser?.usuarioSuporteSenha?.trim();
+
+		if (!login || !password) {
+			throw new Error(INTERNAL_ERRORS.supportUserCredentialsMissing);
+		}
+
+		return { login, password };
+	}
+
+	private async verifySupportUserActive(): Promise<boolean> {
+		const url = `${Config.bling.baseUrl}${Config.bling.endpoints.verifySupportUser}`;
+		const data = await this.http.post<IBlingSupportUserActiveResponse>(url, "", Config.bling.headers);
+
+		return data.data?.success === true;
 	}
 }

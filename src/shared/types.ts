@@ -22,6 +22,24 @@ export interface IBlingCompanyResponse {
 	};
 }
 
+export interface IBlingSupportUserCredentialsData {
+	usuarioSuporteLogin: string;
+	usuarioSuporteSenha: string;
+}
+
+export interface IBlingCompanyDetailsResponse {
+	data: {
+		usuarioSuporte?: Partial<IBlingSupportUserCredentialsData>;
+	};
+}
+
+export interface IBlingSupportUserActiveResponse {
+	data?: {
+		success?: boolean;
+		id?: string;
+	};
+}
+
 // Bling API — ticket creation response
 export interface IBlingTicketResponse {
 	status: "success" | "error";
@@ -33,6 +51,11 @@ export interface IBlingTicketResponse {
 export interface ITicketResult {
 	ticketNumber: string;
 	ticketId: string;
+}
+
+export interface ISupportUserCredentials {
+	login: string;
+	password: string;
 }
 
 // Ticket payload fields
@@ -67,6 +90,9 @@ export interface ITicketLinkPayload {
 	companyName?: string | undefined;
 	source: "ticketlauncher";
 }
+
+export type TranscriptionStatus = "pending" | "sent" | "not-sent";
+export type SupportUserCopyStatus = "idle" | "copying" | "copied" | "error";
 
 // Status panel states
 export type PanelState =

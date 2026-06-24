@@ -83,17 +83,89 @@
 	flex-shrink: 0 !important;
 }
 
+.bl-company-badge__details {
+	min-width: 0 !important;
+	flex: 1 !important;
+}
+
 .bl-company-badge__name {
 	font-size: 13px !important;
 	font-weight: 600 !important;
 	color: var(--bl-success-text) !important;
 	margin: 0 !important;
 	line-height: normal !important;
+	overflow: hidden !important;
+	text-overflow: ellipsis !important;
+	white-space: nowrap !important;
+}
+
+.bl-company-badge__name a {
+	color: var(--bl-success-text) !important;
+	text-decoration: none !important;
+}
+
+.bl-company-badge__name a:hover {
+	text-decoration: underline !important;
 }
 
 .bl-company-badge__doc {
 	font-size: 11px !important;
-	color: #388E3C !important;
+	color: var(--bl-green) !important;
 	margin: 1px 0 0 !important;
 	line-height: normal !important;
+	overflow: hidden !important;
+	text-overflow: ellipsis !important;
+	white-space: nowrap !important;
+}
+
+.bl-company-badge__copy {
+	width: 28px !important;
+	height: 28px !important;
+	margin-left: auto !important;
+	border: 0.5px solid var(--bl-green-border) !important;
+	border-radius: var(--bl-radius-sm) !important;
+	background: var(--bl-surface) !important;
+	color: var(--bl-green) !important;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	flex-shrink: 0 !important;
+	cursor: pointer !important;
+	padding: 0 !important;
+	transition: background var(--bl-transition), color var(--bl-transition), border-color var(--bl-transition) !important;
+	box-sizing: border-box !important;
+}
+
+.bl-company-badge__copy:hover {
+	background: var(--bl-green-light) !important;
+}
+
+.bl-company-badge__copy:disabled {
+	cursor: wait !important;
+	opacity: 0.7 !important;
+}
+
+.bl-company-badge__copy--copying {
+	background: var(--bl-surface-2) !important;
+	color: var(--bl-text-secondary) !important;
+}
+
+.bl-company-badge__copy--copied {
+	background: var(--bl-green) !important;
+	border-color: var(--bl-green) !important;
+	color: #fff !important;
+}
+
+.bl-company-badge__copy--error {
+	background: var(--bl-danger-bg) !important;
+	border-color: var(--bl-danger-border) !important;
+	color: var(--bl-danger) !important;
+}
+
+.bl-company-badge__copy-icon {
+	width: 14px !important;
+	height: 14px !important;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
 }

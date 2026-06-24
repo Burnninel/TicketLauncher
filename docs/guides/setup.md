@@ -17,22 +17,34 @@ npm install
 ## Build
 
 ```bash
-npm run typecheck   # verificação de tipos (tsc --noEmit)
-npm run build       # gera dist/content.js, dist/background.js e dist/content.css
+npm run typecheck
+npm run build
 ```
 
 Rode `npm run typecheck` antes do build para capturar erros de tipo.
 
 ## Variáveis de ambiente
 
-Não há. Todas as configurações (URLs, endpoints, seletores, timeouts) ficam em `src/shared/config.ts`. As strings de UI ficam em `src/shared/constants.ts`.
+Para o piloto da integração com o VoiceTranscriber, copie `.env.example` para `.env` e preencha:
+
+```env
+VOICE_TRANSCRIBER_INTEGRATION_TOKEN=
+```
+
+Esse valor é lido apenas no momento do `npm run build` e fica embutido no bundle gerado em `dist/`. Use somente para teste controlado.
+
+A estratégia de produção está documentada em `docs/integration/voicetranscriber-auth-plan.md`.
+
+As demais configurações (URLs, endpoints, seletores e timeouts) ficam em `src/shared/config.ts`. As strings de UI ficam em `src/shared/constants.ts`.
 
 ## Estrutura gerada
 
 O esbuild bundla o código TypeScript em:
 
-- `dist/content.js` — content script injetado na página do callsys
-- `dist/background.js` — service worker (proxy de requisições)
-- `dist/content.css` — estilos do bubble/painel (bundle dos módulos em `src/presentation/styles/`)
+- `dist/content.js`: content script injetado na página do callsys.
+- `dist/background.js`: service worker, usado como proxy de requisições.
+- `dist/content.css`: estilos do bubble/painel.
 
-A pasta `dist/` é autocontida: além dos bundles JS/CSS, o build copia o `manifest.json` e a pasta `assets/` para dentro dela. É a `dist/` que o Chrome carrega em desenvolvimento e que se zipa para publicação na Chrome Web Store. Ela não é versionada (está no `.gitignore`) — sempre rode `npm run build` após clonar ou alterar o código TS ou os estilos.
+A pasta `dist/` é autocontida: além dos bundles JS/CSS, o build copia o `manifest.json` e a pasta `assets/` para dentro dela. É a `dist/` que o Chrome carrega em desenvolvimento e que se zipa para publicação na Chrome Web Store.
+
+Ela não é versionada porque está no `.gitignore`. Sempre rode `npm run build` após clonar ou alterar o código TypeScript ou os estilos.

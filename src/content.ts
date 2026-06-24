@@ -2,16 +2,19 @@ import { Panel } from "./presentation/panel";
 import { CompanyUseCase } from "./domain/usecases/company.usecase";
 import { TicketUseCase } from "./domain/usecases/ticket.usecase";
 import { NotifyTranscriberUseCase } from "./domain/usecases/notify-transcriber.usecase";
+import { SupportUserUseCase } from "./domain/usecases/support-user.usecase";
 import { CallsysScraper } from "./infrastructure/callsys.scraper";
 import { VoiceTranscriberApi } from "./infrastructure/voicetranscriber.api";
 import { LOG_MESSAGES, MESSAGES } from "./shared/constants";
 import type { CompanyEntity } from "./domain/entities/company.entity";
+import type { ISupportUserCredentials, ITicketResult, TranscriptionStatus } from "./shared/types";
 
 const panel = new Panel();
 const scraper = new CallsysScraper();
 const companyUseCase = new CompanyUseCase();
 const ticketUseCase = new TicketUseCase();
 const notifyTranscriberUseCase = new NotifyTranscriberUseCase(new VoiceTranscriberApi());
+const supportUserUseCase = new SupportUserUseCase();
 
 document.body.appendChild(panel.element);
 
@@ -29,6 +32,7 @@ panel.onTrigger(() => {
 panel.onClose(() => closePanel());
 panel.onSubmit(() => void submitTicket());
 panel.onCnpjConfirm((cnpj) => void fetchCompany(cnpj));
+panel.onSupportUserCopy(() => void copySupportUser());
 
 document.addEventListener("click", () => {
 	if (panel.isOpen) closePanel();
@@ -52,7 +56,7 @@ async function fetchCompany(cnpj: string): Promise<void> {
 	try {
 		currentCompany = await companyUseCase.fetchCompanyByCnpj(cnpj);
 		currentCnpj = cnpj;
-		panel.showCompany(currentCompany.name, cnpj);
+		panel.showCompany(currentCompany.name, cnpj, currentCompany.id);
 	} catch (error: unknown) {
 		currentCompany = null;
 		panel.showCompanyError(toCompanyErrorMessage(error));
@@ -74,14 +78,69 @@ async function submitTicket(): Promise<void> {
 	try {
 		const result = await ticketUseCase.createTicket(currentCompany, message);
 		panel.showTicketCreated(result.ticketNumber);
-		const callId = scraper.extractCallId();
-		if (callId) {
-			void notifyTranscriberUseCase
-				.linkTicket({ callId, result, cnpj: currentCnpj, company: currentCompany })
-				.catch((err: unknown) => console.warn(LOG_MESSAGES.voiceTranscriberNotifyFailed, err));
-		}
+		const transcriptionStatus = await notifyTranscriber(result, currentCompany);
+		panel.showTranscriptionStatus(transcriptionStatus);
 	} catch {
 		panel.showInlineError(MESSAGES.error.ticketError);
+	}
+}
+
+async function notifyTranscriber(result: ITicketResult, company: CompanyEntity): Promise<TranscriptionStatus> {
+	const callId = scraper.extractCallId();
+	if (!callId) return "not-sent";
+
+	try {
+		await notifyTranscriberUseCase.linkTicket({ callId, result, cnpj: currentCnpj, company });
+		return "sent";
+	} catch (err: unknown) {
+		console.warn(LOG_MESSAGES.voiceTranscriberNotifyFailed, err);
+		return "not-sent";
+	}
+}
+
+async function copySupportUser(): Promise<void> {
+	const company = currentCompany;
+	if (!company) {
+		panel.setSupportUserCopyState("error");
+		return;
+	}
+
+	panel.setSupportUserCopyState("copying");
+
+	try {
+		const credentials = await supportUserUseCase.fetchSupportUserCredentials(company);
+		await writeToClipboard(formatSupportUserCredentials(credentials));
+		panel.setSupportUserCopyState("copied");
+	} catch (err: unknown) {
+		const reason = err instanceof Error ? err.message : "unknown error";
+		console.warn(LOG_MESSAGES.supportUserCopyFailed, reason);
+		panel.setSupportUserCopyState("error");
+	}
+}
+
+function formatSupportUserCredentials(credentials: ISupportUserCredentials): string {
+	return `${credentials.login} ${credentials.password}`;
+}
+
+async function writeToClipboard(text: string): Promise<void> {
+	if (navigator.clipboard?.writeText) {
+		await navigator.clipboard.writeText(text);
+		return;
+	}
+
+	const textarea = document.createElement("textarea");
+	textarea.value = text;
+	textarea.setAttribute("readonly", "true");
+	textarea.style.position = "fixed";
+	textarea.style.opacity = "0";
+	textarea.style.pointerEvents = "none";
+	document.body.appendChild(textarea);
+	textarea.select();
+	const didCopy = document.execCommand("copy");
+	textarea.remove();
+
+	if (!didCopy) {
+		throw new Error("Clipboard copy failed.");
 	}
 }
 

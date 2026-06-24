@@ -2,7 +2,31 @@
 // natively (no plugins). content.ts is the injected content script; background.ts
 // is the service worker.
 import { build } from "esbuild";
-import { copyFileSync, mkdirSync, readdirSync } from "fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync } from "fs";
+
+function loadDotEnv(path = ".env") {
+	if (!existsSync(path)) return {};
+
+	const values = {};
+	for (const line of readFileSync(path, "utf8").split(/\r?\n/)) {
+		const trimmed = line.trim();
+		if (!trimmed || trimmed.startsWith("#")) continue;
+
+		const match = /^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/.exec(line);
+		if (!match) continue;
+
+		let value = match[2].trim();
+		const quote = value[0];
+		if ((quote === "\"" || quote === "'") && value.endsWith(quote)) {
+			value = value.slice(1, -1);
+		}
+		values[match[1]] = value;
+	}
+
+	return values;
+}
+
+const env = { ...process.env, ...loadDotEnv() };
 
 const common = {
 	bundle: true,
@@ -10,7 +34,15 @@ const common = {
 	legalComments: "none",
 };
 
-const js = { ...common, format: "iife" };
+const js = {
+	...common,
+	format: "iife",
+	define: {
+		__VOICE_TRANSCRIBER_INTEGRATION_TOKEN__: JSON.stringify(
+			env.VOICE_TRANSCRIBER_INTEGRATION_TOKEN ?? ""
+		),
+	},
+};
 
 await build({
 	...js,

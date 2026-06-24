@@ -25,6 +25,11 @@ export class VoiceTranscriberApi {
 	}
 
 	private async getIntegrationToken(): Promise<string> {
+		const buildTimeToken = Config.voiceTranscriber.buildTimeIntegrationToken.trim();
+		if (buildTimeToken) {
+			return buildTimeToken;
+		}
+
 		const key = Config.voiceTranscriber.tokenStorageKey;
 		const result = await chrome.storage.local.get(key);
 		const stored = result[key];

@@ -1,4 +1,6 @@
 import { setHidden } from "./dom";
+import { MESSAGES } from "../shared/constants";
+import type { TranscriptionStatus } from "../shared/types";
 
 export interface IStatusElements {
 	cnpjWrapperElement: HTMLElement;
@@ -13,6 +15,7 @@ export interface IStatusElements {
 	inlineErrorTextElement: HTMLElement;
 	successElement: HTMLElement;
 	successNumberElement: HTMLElement;
+	successTranscriptionElement: HTMLElement;
 }
 
 // Drives the five mutually exclusive body regions (loading / cnpj-error /
@@ -31,6 +34,7 @@ export class StatusView {
 	private readonly _inlineErrorText: HTMLElement;
 	private readonly _success: HTMLElement;
 	private readonly _successNumber: HTMLElement;
+	private readonly _successTranscription: HTMLElement;
 
 	constructor(elements: IStatusElements) {
 		this._cnpjWrapper = elements.cnpjWrapperElement;
@@ -45,6 +49,7 @@ export class StatusView {
 		this._inlineErrorText = elements.inlineErrorTextElement;
 		this._success = elements.successElement;
 		this._successNumber = elements.successNumberElement;
+		this._successTranscription = elements.successTranscriptionElement;
 	}
 
 	// CNPJ visible, loading dots visible, everything else hidden.
@@ -55,9 +60,14 @@ export class StatusView {
 	}
 
 	// CNPJ visible and locked, company badge + form visible.
-	showForm(companyName: string, companyDoc: string): void {
+	showForm(companyName: string, companyDoc: string, companyId: number): void {
 		this._hideDynamic();
-		this._companyName.textContent = companyName;
+		const link = document.createElement("a");
+		link.href = `https://www.bling.com.br/adm.empresa.php?buscaid=${companyId}`;
+		link.textContent = companyName;
+		link.target = "_blank";
+		link.rel = "noopener noreferrer";
+		this._companyName.replaceChildren(link);
 		this._companyDoc.textContent = companyDoc;
 		setHidden(this._cnpjWrapper, false);
 		setHidden(this._companyBadge, false);
@@ -73,10 +83,17 @@ export class StatusView {
 	}
 
 	// Success banner only — CNPJ hidden.
-	showSuccess(ticketNumber: string): void {
+	showSuccess(ticketNumber: string, transcriptionStatus: TranscriptionStatus): void {
 		this._hideDynamic();
 		this._successNumber.textContent = ticketNumber;
+		this.showTranscriptionStatus(transcriptionStatus);
 		setHidden(this._success, false);
+	}
+
+	showTranscriptionStatus(status: TranscriptionStatus): void {
+		this._successTranscription.textContent = MESSAGES.transcription[status];
+		this._successTranscription.className =
+			`bl-success-banner__transcription bl-success-banner__transcription--${status}`;
 	}
 
 	// Inline validation / ticket-creation error within the form.

@@ -48,7 +48,7 @@
 
 .bl-field__input:focus {
 	border-color: var(--bl-green) !important;
-	box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.12) !important;
+	box-shadow: 0 0 0 2px rgba(65, 200, 70, 0.14) !important;
 	outline: none !important;
 }
 

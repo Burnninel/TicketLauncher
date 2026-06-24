@@ -13,6 +13,10 @@ export const ICONS = {
 	check: `<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
 		<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
 	</svg>`,
+	copy: `<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+		<rect x="9" y="9" width="11" height="11" rx="2" ry="2"/>
+		<path stroke-linecap="round" stroke-linejoin="round" d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+	</svg>`,
 	errorCircle: `<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 		<circle cx="12" cy="12" r="10"/>
 		<path stroke-linecap="round" stroke-linejoin="round" d="M15 9l-6 6M9 9l6 6"/>

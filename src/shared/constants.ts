@@ -14,10 +14,13 @@ export const HTTP_TIMEOUT_MS = 10_000;
 
 export const LOG_MESSAGES = {
 	voiceTranscriberNotifyFailed: "[TicketLauncher] VoiceTranscriber notify failed:",
+	supportUserCopyFailed: "[TicketLauncher] Support user copy failed:",
 } as const;
 
 export const INTERNAL_ERRORS = {
 	voiceTranscriberTokenMissing: "VoiceTranscriber integration token is not configured.",
+	supportUserInactive: "Support user is not active.",
+	supportUserCredentialsMissing: "Support user credentials are not available.",
 } as const;
 
 export const MESSAGES = {
@@ -48,6 +51,17 @@ export const MESSAGES = {
 	success: {
 		ticketNumber: (ticketNumber: string): string => `Ticket #${ticketNumber}`,
 		sub: "Criado com sucesso",
+	},
+	transcription: {
+		pending: "Enviando para transcrição...",
+		sent: "Enviado para transcrição",
+		"not-sent": "Não enviado para transcrição",
+	},
+	supportUser: {
+		copyLabel: "Copiar usuário de suporte",
+		copyingLabel: "Copiando usuário de suporte",
+		copiedLabel: "Usuário de suporte copiado",
+		errorLabel: "Não foi possível copiar usuário de suporte",
 	},
 	defaults: {
 		ticketDescription: "Registro de atendimento telefônico",
